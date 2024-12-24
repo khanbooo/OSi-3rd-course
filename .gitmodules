@@ -1,0 +1,6 @@
+[submodule "os/llhttp"]
+	path = os/llhttp
+	url = git@github.com:nodejs/llhttp.git
+[submodule "os/lab3/llhttp"]
+	path = os/lab3/llhttp
+	url = git@github.com:nodejs/llhttp.git
