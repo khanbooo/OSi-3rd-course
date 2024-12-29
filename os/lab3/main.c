@@ -3,10 +3,29 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
-#include "hash.h"
+#include <unistd.h>
+#include <signal.h>
+#include <errno.h>
 
-#define DEFAULT_PORT 8080
+#include "hash.h"
+#include "logger.h"
+
+#define DEFAULT_PORT 1080
 #define DEFAULT_BACKLOG 128
+
+Logger* logger;
+
+int interrupted = 0;
+
+void signal_handler(int signal){
+    interrupted = 1;
+}
+
+static void set_signal_handler(){
+    struct sigaction act = {0};
+    act.sa_handler = signal_handler;
+    sigaction(SIGINT, &act, NULL);
+}
 
 typedef struct client_context {
     int client_socket;
@@ -53,27 +72,42 @@ int configureServerSocket(int port, int backlog){
 }
 
 void handle_client(client_context* context){
-    printf("client_socket: %d\n", context->client_socket);
+    // printf("client_socket: %d\n", context->client_socket);
+    logger_info(logger, "client connected");
     free(context);
 }
 
 void* client_thread(void * args){
-    __NOP(); __NOP(); __NOP(); __NOP();
+    asm volatile(
+        "nop"
+    );
     handle_client((client_context*)args);
-    __NOP(); __NOP(); __NOP(); __NOP();
-    return;
+    asm volatile(
+        "nop"
+    );
+    // printf("done\n");
+    logger_info(logger, "client disconnected");
+    return NULL;
 }
+
 
 int main(){
     // char *str = "string\0";
 
     // uint64_t hash = MurmurOAAT64(str);
 
+    logger = create_logger(stdout, INFO);
+
+    set_signal_handler();
+
     int server_socket = configureServerSocket(DEFAULT_PORT, DEFAULT_BACKLOG);
     if (server_socket < 0){
-        perror("configureServerSocket");
+        // perror("configureServerSocket");
+        logger_error(logger, "configureServerSocket");
         exit(1);
     }
+
+    logger_info(logger, "server started");
 
     struct sockaddr_in client_address;
     socklen_t client_address_len = sizeof(client_address);
@@ -83,14 +117,17 @@ int main(){
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-    while (1){
+    while (!interrupted){
         int err;
         // int client_socket = accept(server_socket, NULL, NULL);
         int client_socket = accept(server_socket, (struct sockaddr*)&client_address, &client_address_len);
         if (client_socket < 0){
-            perror("accept");
-            close(server_socket);
-            exit(1);
+            // perror("accept");
+            if (errno == EINTR) {
+                continue;
+            }
+            logger_error(logger, "accept");
+            continue;
         }
 
         client_context* context = (client_context*)malloc(sizeof(client_context));
@@ -98,10 +135,14 @@ int main(){
 
         err = pthread_create(&tid, &attr, (void*(*)(void*))client_thread, (void*)context);
         if (err){
-            perror("pthread_create");
-            close(client_socket);
-            close(server_socket);
-            exit(1);
+            logger_error(logger, "pthread_create");
+
+            continue;
         }
     }
+    
+    pthread_attr_destroy(&attr);
+    close(server_socket);
+    logger_info(logger, "server stopped");
+    destroy_logger(logger);
 }
