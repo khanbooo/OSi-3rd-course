@@ -76,7 +76,7 @@ static void get_host_from_url(char *url, char *host){
 }
 
 static int connect_by_url(char *url){
-    char *host[256];
+    char host[256];
     get_host_from_url(url, host);
 
     struct addrinfo hints = {
@@ -138,6 +138,8 @@ void handle_client(client_context* context){
 
     int remote = connect_by_url(request.url);
 
+    logger_info(logger, "connected to remote");
+
     
 
     int sent = 0;
@@ -153,23 +155,27 @@ void handle_client(client_context* context){
         sent += len;
     }
 
+    logger_info(logger, "sent request to remote");
+
     free(request_buffer);
 
-    pthread_t server_thread;
-    server_context *server_context = (server_context*)malloc(sizeof(server_context));
-    server_context->server_socket = remote;
+    pthread_t tid;
+    server_context *srv_context = (server_context*)malloc(sizeof(server_context));
+    srv_context->server_socket = remote;
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-    err = pthread_create(&server_thread, &attr, (void*(*)(void*))server_thread, (void*)server_context);
+    err = pthread_create(&tid, NULL, (void*(*)(void*))server_thread, (void*)srv_context);
 
     if (err){
         logger_error(logger, "pthread_create");
         free(request_buffer);
         return;
     }
+
+    logger_info(logger, "created server thread");
 
     close(context->client_socket);
     free(context);

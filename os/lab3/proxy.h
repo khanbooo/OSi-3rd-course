@@ -1,5 +1,10 @@
 #include "http.h"
 #include <unistd.h>
+#include <sys/socket.h>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 // #include <
 
 
@@ -12,7 +17,7 @@ typedef struct client_context {
 } client_context;
 
 typedef struct server_context {
-    int dont_know;
+    int server_socket;
 } server_context;
 
 void handle_client(client_context* context);
