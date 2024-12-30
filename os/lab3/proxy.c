@@ -16,49 +16,19 @@ static void log_request(request_t *request) {
     logger_info(logger, buffer);
 }
 
-static int recieve_request(request_t *request, void **buffer, int *len, int client){
-    int request_buffer_size = BUFFER_SIZE;
-    void *request_buffer = malloc(request_buffer_size);
-    int request_len = 0;
-
-    while (!request->finished){
-        int len = read(client, request_buffer + request_len, request_buffer_size - request_len);
-        printf("len: %d\n", len);
-        // printf("buffer: %s\n", (char *)request_buffer);
-        logger_info(logger, "client is working");
-        if (len < 0){
-            logger_error(logger, "read");
-            free(request_buffer);
-            return -1;
-        }
-        
-        if (len == 0){
-            logger_info(logger, "client breaks");
-            break;
-        }
-        
-        request_len += len;
-        if (request_len == request_buffer_size){
-            request_buffer_size *= 2;
-            request_buffer = realloc(request_buffer, request_buffer_size);
-
-            if (request_buffer == NULL){
-                logger_info(logger, "realloc failed");
-            }
-        }
-        
-        if (request_parse(request, request_buffer, request_len) < 0){
-            logger_error(logger, "request_parse");
-            free(request_buffer);
-            return -1;
-        }
-    }
-
-    *buffer = request_buffer;
-    *len = request_len;
-
-    return 0;
+static void log_response(response_t *response) {
+    char buffer[256];
+    snprintf(
+        buffer, 
+        sizeof(buffer), 
+        "response: HTTP/%d.%d %d",
+        response->major_version,
+        response->minor_version,
+        response->status_code
+    );
+    logger_info(logger, buffer);
 }
+
 
 static void get_host_from_url(char *url, char *host){
     char *start = strstr(url, "://");
@@ -120,9 +90,7 @@ static int connect_by_url(char *url){
 void handle_client(client_context* context){
     logger_info(logger, "client connected");
 
-    int err;
     void *request_buffer = malloc(BUFFER_SIZE);
-    // int request_len = 0;
     request_t request;
     request_init(&request);
     
@@ -138,8 +106,6 @@ void handle_client(client_context* context){
         close(context->client_socket);
         return;
     }
-
-    
 
     int remote = connect_by_url(request.url);
     
@@ -188,7 +154,6 @@ void handle_client(client_context* context){
 
     sent = 0;
     received = 0;
-
     
     int response_buffer_size = BUFFER_SIZE;
     void *response_buffer = malloc(BUFFER_SIZE);
@@ -197,41 +162,26 @@ void handle_client(client_context* context){
 
     while (sent < received || !response.finished || (sent == 0 && received == 0)){
         int len = read(remote, response_buffer + received, response_buffer_size - received);
-        // printf("%d %d\n", sent, received);
         if (len < 0){
             logger_error(logger, "read");
-            // free(request_buffer);
             close(remote);
             close(context->client_socket);
             break;
         }
-
-        // if (len == 0){
-        //     logger_info(logger, "break");
-        //     continue;
-        // }
 
         received += len;
 
         int lenw = write(context->client_socket, response_buffer + sent, received - sent);
         if (lenw < 0){
             logger_error(logger, "write");
-            // free(request_buffer);
             close(remote);
             close(context->client_socket);
             break;
         }
         sent += lenw;
 
-        // printf("response_len: %d\n", received);
-        // if (received == response_buffer_size){
-        //     response_buffer_size *= 2;
-        //     response_buffer = realloc(response_buffer, response_buffer_size);
-        // }
-
         if (response_parse(&response, response_buffer + received - len, len) < 0){
             logger_error(logger, "response_parse");
-            // free(request_buffer);
             close(remote);
             close(context->client_socket);
             continue;
@@ -251,112 +201,5 @@ void handle_client(client_context* context){
 void* client_thread(void * args){
     handle_client((client_context*)args);
     logger_info(logger, "client disconnected");
-
-
     return NULL;
 }
-
-static int recieve_response(response_t *response, void **buffer, int *len, int server){
-    int response_buffer_size = BUFFER_SIZE;
-    void *response_buffer = malloc(response_buffer_size);
-    int response_len = 0;
-
-    while (!response->finished){
-        logger_info(logger, "server is working");
-        // printf("response_buffer: %s\n", (char *)response_buffer);
-        
-        int len = read(server, response_buffer + response_len, response_buffer_size - response_len);
-        
-        if (len < 0){
-            logger_error(logger, "read");
-            free(response_buffer);
-            return -1;
-        }
-        
-        if (len == 0){
-            logger_info(logger, "server breaks");
-            break;
-        }
-        
-        response_len += len;
-        printf("response_len: %d\n", response_len);
-        if (response_len == response_buffer_size){
-            response_buffer_size *= 2;
-            response_buffer = realloc(response_buffer, response_buffer_size);
-        }
-        
-        if (response_parse(response, response_buffer + response_len - len, len) < 0){
-            logger_error(logger, "response_parse");
-            free(response_buffer);
-            return -1;
-        }
-    }
-
-    *buffer = response_buffer;
-    *len = response_len;
-
-    return 0;
-}
-
-static void log_response(response_t *response) {
-    char buffer[256];
-    snprintf(
-        buffer, 
-        sizeof(buffer), 
-        "response: HTTP/%d.%d %d",
-        response->major_version,
-        response->minor_version,
-        response->status_code
-    );
-    logger_info(logger, buffer);
-}
-
-void handle_server(server_context* context){
-    // printf("server_socket: %d\n", context->server_socket);
-    logger_info(logger, "server connected");
-
-    int err;
-    void *response_buffer = malloc(BUFFER_SIZE);
-    int response_len = 0;
-    response_t response;
-    response_init(&response);
-
-    err = recieve_response(&response, &response_buffer, &response_len, context->server_socket);
-
-    if (err < 0){
-        logger_error(logger, "recieve_response");
-        free(response_buffer);
-        return;
-    }
-
-    // log_response(&response);
-
-    int sent = 0;
-    int received = 0;
-
-    while (sent < response_len){
-        int len = write(context->client_socket, response_buffer + sent, response_len - sent);
-        if (len < 0){
-            logger_error(logger, "write");
-            free(response_buffer);
-            close(context->server_socket);
-            return;
-        }
-        sent += len;
-    }
-
-    logger_info(logger, "sent response to client");
-
-    free(response_buffer);
-    
-    close(context->server_socket);
-
-    free(context);
-}
-
-void* server_thread(void * args){
-    handle_server((server_context*)args);
-    logger_info(logger, "server disconnected");
-    return NULL;
-}
-

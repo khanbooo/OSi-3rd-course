@@ -7,7 +7,6 @@
 #include <signal.h>
 #include <errno.h>
 
-#include "hash.h"
 #include "proxy.h"
 
 #define DEFAULT_PORT 1080
@@ -68,19 +67,13 @@ int configureServerSocket(int port, int backlog){
     return server_socket;
 }
 
-
 int main(){
-    // char *str = "string\0";
-
-    // uint64_t hash = MurmurOAAT64(str);
-
     logger = create_logger(stdout, INFO);
 
     set_signal_handler();
 
     int server_socket = configureServerSocket(DEFAULT_PORT, DEFAULT_BACKLOG);
     if (server_socket < 0){
-        // perror("configureServerSocket");
         logger_error(logger, "configureServerSocket");
         exit(1);
     }
@@ -97,7 +90,6 @@ int main(){
 
     while (!interrupted){
         int err;
-        // int client_socket = accept(server_socket, NULL, NULL);
         int client_socket = accept(server_socket, (struct sockaddr*)&client_address, &client_address_len);
         if (client_socket < 0){
             // perror("accept");

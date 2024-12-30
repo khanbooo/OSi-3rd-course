@@ -1,12 +1,11 @@
-#include "http.h"
 #include <unistd.h>
 #include <sys/socket.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-// #include <
 
+#include "http.h"
 
 #define BUFFER_SIZE 1024 * 64
 

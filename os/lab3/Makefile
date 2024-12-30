@@ -1,8 +1,5 @@
-# TARGET = proxy
-# SRCS =
-
-TEST_HASHMAP = test_hashmap
-SRCS_TEST_HASHMAP = main.c proxy.c http.c logger.c
+PROXY = proxy
+SRCS_PROXY = main.c proxy.c http.c logger.c
 
 CC=gcc
 RM=rm
@@ -10,16 +7,15 @@ CFLAGS= -g -Wall
 LIBS=./llhttp/build/libllhttp.a -lpthread
 INCLUDE_DIR="."
 
-# libllhttp: ./llhttp/build/libllhttp.a
+all: ${PROXY} libllhttp
 
-# ./llhttp/build/libllhttp.a:
-# 	(cd llhttp && npm ci && make)
+libllhttp: ./llhttp/build/libllhttp.a
 
-all: ${TEST_HASHMAP} 
+./llhttp/build/libllhttp.a:
+	(cd llhttp && npm ci && make)
 
-${TEST_HASHMAP}: ${SRCS_TEST_HASHMAP}
-	${CC} ${CFLAGS} -I${INCLUDE_DIR} -I./llhttp/build/ ${SRCS_TEST_HASHMAP} ${LIBS} -o ${TEST_HASHMAP}
-
+${PROXY}: ${SRCS_PROXY}
+	${CC} ${CFLAGS} -I${INCLUDE_DIR} -I./llhttp/build/ ${SRCS_PROXY} ${LIBS} -o ${PROXY}
 
 clean:
-	${RM} -f *.o ${TEST_HASHMAP}
+	${RM} -f *.o ${PROXY}

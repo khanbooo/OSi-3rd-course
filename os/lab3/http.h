@@ -1,6 +1,3 @@
-#ifndef PROXY_HTTP_H
-#define PROXY_HTTP_H
-
 #include <llhttp.h>
 #include <string.h>
 #include <stdlib.h>
@@ -35,8 +32,3 @@ void response_init(response_t *response);
 
 int request_parse(request_t *request, char *buf, int len);
 int response_parse(response_t *response, char *buf, int len);
-
-
-// char *http_host_from_url(char *url);
-
-#endif /* PROXY_HTTP_H */
