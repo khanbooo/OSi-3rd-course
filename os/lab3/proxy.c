@@ -133,6 +133,13 @@ void handle_client(client_context* context){
     log_request(&request);
 
     int remote = connect_by_url(request.url);
+    
+    if (remote < 0){
+        logger_error(logger, "connect_by_url");
+        free(request_buffer);
+        close(context->client_socket);
+        return;
+    }
 
     logger_info(logger, "connected to remote");
 
@@ -198,8 +205,9 @@ static int recieve_response(response_t *response, void **buffer, int *len, int s
     while (!response->finished){
         logger_info(logger, "server is working");
         // printf("response_buffer: %s\n", (char *)response_buffer);
-        printf("response_len: %d\n", response_len);
+        
         int len = read(server, response_buffer + response_len, response_buffer_size - response_len);
+        
         if (len < 0){
             logger_error(logger, "read");
             free(response_buffer);
@@ -212,13 +220,13 @@ static int recieve_response(response_t *response, void **buffer, int *len, int s
         }
         
         response_len += len;
+        printf("response_len: %d\n", response_len);
         if (response_len == response_buffer_size){
             response_buffer_size *= 2;
             response_buffer = realloc(response_buffer, response_buffer_size);
-            continue;
         }
         
-        if (response_parse(response, response_buffer, response_len) < 0){
+        if (response_parse(response, response_buffer + response_len - len, len) < 0){
             logger_error(logger, "response_parse");
             free(response_buffer);
             return -1;
