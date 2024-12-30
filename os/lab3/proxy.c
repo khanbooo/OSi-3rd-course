@@ -113,6 +113,19 @@ static int connect_by_url(char *url){
     return remote;
 }
 
+int send_from_cache(int client, stream_t *cache){
+    int sent = 0;
+
+    while (sent < cache->len){
+        int len = write(client, cache->buffer->data + sent, cache->len - sent);
+        if (len < 0){
+            logger_error(logger, "write");
+            return -1;
+        }
+        sent += len;
+    }
+}
+
 void handle_client(client_context* context){
     logger_info(logger, "client connected");
 
@@ -131,6 +144,23 @@ void handle_client(client_context* context){
     }
 
     log_request(&request);
+
+    stream_t *cached;
+    stream_t *put = stream_create(request_len);
+
+    cache_get_or_put(context->cache, request.url, &cached, put);
+
+    if (cached){
+        free(request_buffer);
+        stream_destroy(put);
+        err = send_from_cache(context->client_socket, cached);
+        if (err < 0){
+            logger_error(logger, "send_from_cache");
+        }
+        close(context->client_socket);
+        stream_destroy(cached);
+        return;
+    }
 
     int remote = connect_by_url(request.url);
     

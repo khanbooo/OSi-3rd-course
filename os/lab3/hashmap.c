@@ -44,7 +44,7 @@ void hashmap_insert(hashmap_t *map, char *key, void *value) {
         hashmap_grow(map);
     }
 
-    uint64_t h = hash(key, strlen(key));
+    uint64_t h = hash(key);
 
     for (int idx = h % map->cap; 1; idx = (idx + 1) % map->cap) {
         hashmap_entry_t *entry = &map->entries[idx];
@@ -65,7 +65,7 @@ void hashmap_get(hashmap_t *map, char *key, void **value) {
         return;
     }
 
-    uint64_t h = hash(key, strlen(key));
+    uint64_t h = hash(key);
 
     // No infinite loop since map->len < map->cap is always satisfied
     // due to grow in hashmap_insert
@@ -88,7 +88,7 @@ void hashmap_remove(hashmap_t *map, char *key, void **value) {
         return;
     }
 
-    uint64_t h = hash(key, strlen(key));
+    uint64_t h = hash(key);
 
     int idx;
     for (idx = h & map->cap; 1; idx = (idx + 1) % map->cap) {

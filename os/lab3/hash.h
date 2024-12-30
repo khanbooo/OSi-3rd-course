@@ -2,4 +2,4 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-uint64_t MurmurOAAT64(const char* key);
+uint64_t hash(const char* key);

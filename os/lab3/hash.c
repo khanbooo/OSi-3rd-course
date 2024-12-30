@@ -1,6 +1,6 @@
 #include "hash.h"
 
-uint64_t inline MurmurOAAT64 (const char * key)
+uint64_t inline hash (const char * key)
 {
     uint64_t h = 525201411107845655ull;
     for (;*key;++key) {

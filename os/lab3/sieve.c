@@ -28,7 +28,7 @@ void cache_destroy(cache_t *cache) {
     free(cache);
 }
 
-void cache_get(cache_t *cache, const char *key, stream_t **value) {
+void cache_get(cache_t *cache, char *key, stream_t **value) {
     pthread_rwlock_rdlock(&cache->lock);
     cache_entry_t *cache_entry;
     hashmap_get(&cache->hashmap, key, (void **)&cache_entry);
@@ -84,7 +84,7 @@ static void cache_evict(cache_t *cache) {
     cache->len -= 1;
 }
 
-static void cache_put_nonfull(cache_t *cache, const char *key, stream_t *value){
+static void cache_put_nonfull(cache_t *cache, char *key, stream_t *value){
     cache_entry_t *entry = malloc(sizeof(cache_entry_t));
     entry->key = strdup(key);
     entry->value = stream_copy(value);
@@ -107,7 +107,7 @@ static void cache_put_nonfull(cache_t *cache, const char *key, stream_t *value){
     cache->len += 1;
 }
 
-void cache_put(cache_t *cache, const char *key, stream_t *value) {
+void cache_put(cache_t *cache, char *key, stream_t *value) {
     pthread_rwlock_wrlock(&cache->lock);
     if (cache->len == cache->capacity){
         cache_evict(cache);
@@ -116,7 +116,7 @@ void cache_put(cache_t *cache, const char *key, stream_t *value) {
     pthread_rwlock_unlock(&cache->lock);
 }
 
-void cache_get_or_put(cache_t *cache, const char *key, stream_t **got, stream_t *put) {
+void cache_get_or_put(cache_t *cache, char *key, stream_t **got, stream_t *put) {
     pthread_rwlock_wrlock(&cache->lock);
     cache_entry_t *cache_entry;
     hashmap_get(&cache->hashmap, key, (void **)&cache_entry);

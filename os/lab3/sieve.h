@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdatomic.h>
+#include <string.h>
 #include "hashmap.h"
 #include "stream.h"
 
@@ -26,8 +27,8 @@ void *cache_init(cache_t *cache, int capacity);
 
 void cache_destroy(cache_t *cache);
 
-void cache_get(cache_t *cache, const char *key, stream_t **value);
+void cache_get(cache_t *cache, char *key, stream_t **value);
 
-void cache_put(cache_t *cache, const char *key, stream_t *value);
+void cache_put(cache_t *cache, char *key, stream_t *value);
 
-void cache_get_or_put(cache_t *cache, const char *key, stream_t **got, stream_t *put);
+void cache_get_or_put(cache_t *cache, char *key, stream_t **got, stream_t *put);
