@@ -114,7 +114,6 @@ static int connect_by_url(char *url){
 }
 
 void handle_client(client_context* context){
-    // printf("client_socket: %d\n", context->client_socket);
     logger_info(logger, "client connected");
 
     int err;
@@ -123,9 +122,6 @@ void handle_client(client_context* context){
     request_t request;
     request_init(&request);
 
-    
-
-    // err = recieve_request(context, &request);
     err = recieve_request(&request, &request_buffer, &request_len, context->client_socket);
 
     if (err < 0){
@@ -139,8 +135,6 @@ void handle_client(client_context* context){
     int remote = connect_by_url(request.url);
 
     logger_info(logger, "connected to remote");
-
-    
 
     int sent = 0;
     while (sent < request_len){
@@ -162,6 +156,7 @@ void handle_client(client_context* context){
     pthread_t tid;
     server_context *srv_context = (server_context*)malloc(sizeof(server_context));
     srv_context->server_socket = remote;
+    srv_context->client_socket = context->client_socket;
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -189,14 +184,99 @@ void* client_thread(void * args){
     asm volatile(
         "nop"
     );
-    // printf("done\n");
     logger_info(logger, "client disconnected");
     return NULL;
+}
+
+static int recieve_response(response_t *response, void **buffer, int *len, int server){
+    int response_buffer_size = BUFFER_SIZE;
+    void *response_buffer = malloc(response_buffer_size);
+    int response_len = 0;
+
+    while (!response->finished){
+        int len = read(server, response_buffer + response_len, response_buffer_size - response_len);
+        if (len < 0){
+            logger_error(logger, "read");
+            free(response_buffer);
+            return -1;
+        }
+        
+        if (len == 0){
+            logger_info(logger, "server breaks");
+            break;
+        }
+        
+        response_len += len;
+        if (response_len == response_buffer_size){
+            response_buffer_size *= 2;
+            response_buffer = realloc(response_buffer, response_buffer_size);
+        }
+        
+        if (response_parse(response, response_buffer, response_len) < 0){
+            logger_error(logger, "response_parse");
+            free(response_buffer);
+            return -1;
+        }
+    }
+
+    *buffer = response_buffer;
+    *len = response_len;
+
+    return 0;
+}
+
+static void log_response(response_t *response) {
+    char buffer[256];
+    snprintf(
+        buffer, 
+        sizeof(buffer), 
+        "response: HTTP/%d.%d %d",
+        response->major_version,
+        response->minor_version,
+        response->status_code
+    );
+    logger_info(logger, buffer);
 }
 
 void handle_server(server_context* context){
     // printf("server_socket: %d\n", context->server_socket);
     logger_info(logger, "server connected");
+
+    int err;
+    void *response_buffer = malloc(BUFFER_SIZE);
+    int response_len = 0;
+    response_t response;
+    response_init(&response);
+
+    err = recieve_response(&response, &response_buffer, &response_len, context->server_socket);
+
+    if (err < 0){
+        logger_error(logger, "recieve_response");
+        free(response_buffer);
+        return;
+    }
+
+    log_response(&response);
+
+    int sent = 0;
+
+    while (sent < response_len){
+        int len = write(context->client_socket, response_buffer + sent, response_len - sent);
+        if (len < 0){
+            logger_error(logger, "write");
+            free(response_buffer);
+            close(context->server_socket);
+            break;
+        }
+        sent += len;
+    }
+
+    logger_info(logger, "sent response to client");
+
+    free(response_buffer);
+    
+    close(context->server_socket);
+
     free(context);
 }
 
@@ -208,7 +288,6 @@ void* server_thread(void * args){
     asm volatile(
         "nop"
     );
-    // printf("done\n");
     logger_info(logger, "server disconnected");
     return NULL;
 }

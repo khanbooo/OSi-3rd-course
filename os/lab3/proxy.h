@@ -18,6 +18,7 @@ typedef struct client_context {
 
 typedef struct server_context {
     int server_socket;
+    int client_socket;
 } server_context;
 
 void handle_client(client_context* context);

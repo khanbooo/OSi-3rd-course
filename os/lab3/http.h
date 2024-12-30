@@ -31,10 +31,10 @@ typedef struct response {
 } response_t;
 
 void request_init(request_t *request);
-void response_init(request_t *request);
+void response_init(response_t *response);
 
 int request_parse(request_t *request, char *buf, int len);
-int response_parse(request_t *request, char *buf, int len);
+int response_parse(response_t *response, char *buf, int len);
 
 
 // char *http_host_from_url(char *url);

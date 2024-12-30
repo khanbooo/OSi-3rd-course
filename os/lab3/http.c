@@ -83,23 +83,42 @@ static int on_message_complete_res(llhttp_t *parser) {
     return 0;
 }
 
-void response_init(request_t *request) {
-    memset(request, 0, sizeof(request_t));
-    llhttp_settings_init(&request->settings);
-    request->settings.on_status_complete = on_status_complete;
-    request->settings.on_version_complete = on_version_complete_res;
-    request->settings.on_message_complete = on_message_complete_res;
+void response_init(response_t *response) {
+    memset(response, 0, sizeof(response_t));
+    llhttp_settings_init(&response->settings);
+    response->settings.on_status_complete = on_status_complete;
+    response->settings.on_version_complete = on_version_complete_res;
+    response->settings.on_message_complete = on_message_complete_res;
 
-    llhttp_init(&request->parser, HTTP_RESPONSE, &request->settings);
-    request->parser.data = request;
+    llhttp_init(&response->parser, HTTP_RESPONSE, &response->settings);
+    response->parser.data = response;
 }
 
-int response_parse(request_t *request, char *buf, int len) {
-    llhttp_errno_t err = llhttp_execute(&request->parser, buf, len);
+int response_parse(response_t *response, char *buf, int len) {
+    llhttp_errno_t err = llhttp_execute(&response->parser, buf, len);
+    char buffer[256];
+    snprintf(
+        buffer, 
+        sizeof(buffer), 
+        "response: HTTP/%d.%d %d",
+        response->major_version,
+        response->minor_version,
+        response->status_code
+    );
+    logger_info(logger, buffer);
     if (err != HPE_OK) {
+        snprintf(
+            buffer, 
+            sizeof(buffer), 
+            "response: HTTP/%d.%d %d",
+            response->major_version,
+            response->minor_version,
+            response->status_code
+        );
+        logger_info(logger, buffer);
         logger_error(logger, "llhttp_execute");
         return -1;
     }
+
     return 0;
 }
-
