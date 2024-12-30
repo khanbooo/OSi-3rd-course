@@ -1,74 +1,131 @@
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "hash.h"
 #include "hashmap.h"
 
-void init_hashmap(HashMap* hashmap) {
-    hashmap->cur_amount = 0;
-    pthread_rwlock_init(&hashmap->lock, NULL);
-    hashmap->list_heads = (HashNode**)malloc(MAX_CAPACITY * sizeof(HashNode*));
-    for (int i = 0; i < MAX_CAPACITY; i++) {
-        hashmap->list_heads[i] = NULL;
-    }
-}
+static void hashmap_grow(hashmap_t *map) {
+    int new_cap = map->cap * 2 ?: 2;
 
-void destroy_hashmap(HashMap* hashmap) {
-    // pthread_rwlock_wrlock(&hashmap->lock);
-    for (int i = 0; i < MAX_CAPACITY; i++) {
-        HashNode* cur = hashmap->list_heads[i];
-        while (cur != NULL) {
-            HashNode* next = cur->next;
-            free(cur->key);
-            // free(cur->data)
-            free(cur);
-            cur = next;
+    hashmap_t new = {
+        .cap = new_cap,
+        .len = 0,
+        .entries = calloc(new_cap, sizeof(hashmap_entry_t)),
+    };
+
+    for (int i = 0; i < map->cap; i++) {
+        hashmap_entry_t *entry = &map->entries[i];
+
+        if (entry->key) {
+            hashmap_insert(&new, entry->key, entry->value);
         }
     }
-    free(hashmap->list_heads);
-    // pthread_rwlock_unlock(&hashmap->lock);
-    // pthread_rwlock_destroy(&hashmap->lock);
+
+    hashmap_destroy(map);
+    *map = new;
 }
 
-void insert(HashMap* hashmap, const char* key, int value) {
-    // pthread_rwlock_wrlock(&hashmap->lock);
-    uint64_t hash = get_hash(key);
-    HashNode* cur = hashmap->list_heads[hash];
-    while (cur != NULL) {
-        if (strcmp(cur->key, key) == 0) {
-            cur->data.value = value;
-            // pthread_rwlock_unlock(&hashmap->lock);
-            return;
-        }
-        cur = cur->next;
+void hashmap_init(hashmap_t *map) {
+    map->len = 0;
+    map->cap = 0;
+    map->entries = NULL;
+}
+
+void hashmap_destroy(hashmap_t *map) {
+    if (map->entries) {
+        free(map->entries);
     }
-    HashNode* new_node = (HashNode*)malloc(sizeof(HashNode));
-    new_node->key = (char*)malloc(strlen(key) + 1);
-    strcpy(new_node->key, key);
-    new_node->data.value = value;
-    new_node->next = hashmap->list_heads[hash];
-    hashmap->list_heads[hash] = new_node;
-    hashmap->cur_amount++;
-    // pthread_rwlock_unlock(&hashmap->lock);
 }
 
-void remove(HashMap* hashmap, const char* key) {
-    // pthread_rwlock_wrlock(&hashmap->lock);
-    uint64_t hash = get_hash(key);
-    HashNode* cur = hashmap->list_heads[hash];
-    HashNode* prev = NULL;
-    while (cur != NULL) {
-        if (strcmp(cur->key, key) == 0) {
-            if (prev == NULL) {
-                hashmap->list_heads[hash] = cur->next;
-            } else {
-                prev->next = cur->next;
+void hashmap_insert(hashmap_t *map, char *key, void *value) {
+    // ensure that map has more capacity the
+    if (map->len >= map->cap / 2) {
+        hashmap_grow(map);
+    }
+
+    uint64_t h = hash(key, strlen(key));
+
+    for (int idx = h % map->cap; 1; idx = (idx + 1) % map->cap) {
+        hashmap_entry_t *entry = &map->entries[idx];
+
+        if (!entry->key) {
+            entry->key = key;
+            entry->value = value;
+            break;
+        }
+    }
+
+    map->len += 1;
+}
+
+void hashmap_get(hashmap_t *map, char *key, void **value) {
+    if (map->len == 0) {
+        *value = NULL;
+        return;
+    }
+
+    uint64_t h = hash(key, strlen(key));
+
+    // No infinite loop since map->len < map->cap is always satisfied
+    // due to grow in hashmap_insert
+    for (int idx = h % map->cap; 1; idx = (idx + 1) % map->cap) {
+        hashmap_entry_t *entry = &map->entries[idx];
+
+        if (!entry->key) {
+            *value = NULL;
+            break;
+        } else if (!strcmp(entry->key, key)) {
+            *value = entry->value;
+            break;
+        }
+    }
+}
+
+void hashmap_remove(hashmap_t *map, char *key, void **value) {
+    if (map->len == 0) {
+        *value = NULL;
+        return;
+    }
+
+    uint64_t h = hash(key, strlen(key));
+
+    int idx;
+    for (idx = h & map->cap; 1; idx = (idx + 1) % map->cap) {
+        hashmap_entry_t *entry = &map->entries[idx];
+
+        if (!entry->key) {
+            if (value) {
+                *value = NULL;
             }
-            free(cur->key);
-            // free(cur->data)
-            free(cur);
-            hashmap->cur_amount--;
-            // pthread_rwlock_unlock(&hashmap->lock);
+
             return;
+        } else if (!strcmp(entry->key, key)) {
+            if (value) {
+                *value = entry->value;
+            }
+
+            entry->key = NULL;
+            entry->value = NULL;
+            break;
         }
-        prev = cur;
-        cur = cur->next;
     }
-    // pthread_rwlock_unlock(&hashmap->lock);
+
+    for (int jdx = (idx + 1) % map->cap; 1; jdx = (jdx + 1) % map->cap) {
+        hashmap_entry_t *entry = &map->entries[jdx];
+
+        if (!entry->key) {
+            break;
+        } else {
+            char *rekey = entry->key;
+            char *revalue = entry->value;
+
+            entry->key = NULL;
+            entry->value = NULL;
+
+            hashmap_insert(map, rekey, revalue);
+        }
+    }
+
+    map->len -= 1;
 }
