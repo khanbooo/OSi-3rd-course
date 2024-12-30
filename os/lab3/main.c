@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #include "hash.h"
-#include "logger.h"
+#include "proxy.h"
 
 #define DEFAULT_PORT 1080
 #define DEFAULT_BACKLOG 128
@@ -26,10 +26,6 @@ static void set_signal_handler(){
     act.sa_handler = signal_handler;
     sigaction(SIGINT, &act, NULL);
 }
-
-typedef struct client_context {
-    int client_socket;
-} client_context;
 
 void print(uint64_t number){
     printf("number: %lu\n", number);
@@ -69,25 +65,6 @@ int configureServerSocket(int port, int backlog){
     err = listen(server_socket, backlog);
 
     return server_socket;
-}
-
-void handle_client(client_context* context){
-    // printf("client_socket: %d\n", context->client_socket);
-    logger_info(logger, "client connected");
-    free(context);
-}
-
-void* client_thread(void * args){
-    asm volatile(
-        "nop"
-    );
-    handle_client((client_context*)args);
-    asm volatile(
-        "nop"
-    );
-    // printf("done\n");
-    logger_info(logger, "client disconnected");
-    return NULL;
 }
 
 
