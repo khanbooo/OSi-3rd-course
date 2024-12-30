@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <stdatomic.h>
 #include "buffer.h"
-#include "logger.h"
+
 
 typedef struct stream {
     bool finished;

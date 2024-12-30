@@ -1,4 +1,5 @@
 #include "stream.h"
+#include "logger.h"
 
 stream_t *stream_create(int capacity) {
     stream_t *stream = malloc(sizeof(stream_t));

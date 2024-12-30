@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include "hashmap.h"
 #include "stream.h"
 
 typedef struct cache_entry {
     char *key;
     stream_t *value;
+    atomic_bool visited;
     struct cache_entry *next;
+    struct cache_entry *prev;
 } cache_entry_t;
 
 typedef struct cache {

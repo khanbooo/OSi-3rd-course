@@ -86,6 +86,9 @@ int main(){
 
     logger_info(logger, "server started");
 
+    cache_t cache;
+    cache_init(&cache, 3);
+
     struct sockaddr_in client_address;
     socklen_t client_address_len = sizeof(client_address);
 
@@ -109,6 +112,7 @@ int main(){
 
         client_context* context = (client_context*)malloc(sizeof(client_context));
         context->client_socket = client_socket;
+        context->cache = &cache;
 
         err = pthread_create(&tid, &attr, (void*(*)(void*))client_thread, (void*)context);
         if (err){
