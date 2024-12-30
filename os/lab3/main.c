@@ -11,7 +11,7 @@
 #include "proxy.h"
 
 #define DEFAULT_PORT 1080
-#define DEFAULT_BACKLOG 128
+#define DEFAULT_BACKLOG 300
 
 Logger* logger;
 
@@ -25,6 +25,7 @@ static void set_signal_handler(){
     struct sigaction act = {0};
     act.sa_handler = signal_handler;
     sigaction(SIGINT, &act, NULL);
+    signal(SIGPIPE, SIG_IGN);
 }
 
 void print(uint64_t number){
@@ -113,7 +114,6 @@ int main(){
         err = pthread_create(&tid, &attr, (void*(*)(void*))client_thread, (void*)context);
         if (err){
             logger_error(logger, "pthread_create");
-
             continue;
         }
     }

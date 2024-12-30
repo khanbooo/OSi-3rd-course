@@ -2,18 +2,23 @@
 # SRCS =
 
 TEST_HASHMAP = test_hashmap
-SRCS_TEST_HASHMAP = hash.c hashmap.c main.c
+SRCS_TEST_HASHMAP = main.c proxy.c http.c logger.c
 
 CC=gcc
 RM=rm
 CFLAGS= -g -Wall
-LIBS=-lpthread
+LIBS=./llhttp/build/libllhttp.a -lpthread
 INCLUDE_DIR="."
+
+# libllhttp: ./llhttp/build/libllhttp.a
+
+# ./llhttp/build/libllhttp.a:
+# 	(cd llhttp && npm ci && make)
 
 all: ${TEST_HASHMAP} 
 
-${TARGET_1}: hash.h hashmap.h ${SRCS_TEST_HASHMAP}
-	${CC} ${CFLAGS} -I${INCLUDE_DIR} ${SRCS_TEST_HASHMAP} ${LIBS} -o ${TEST_HASHMAP}
+${TEST_HASHMAP}: ${SRCS_TEST_HASHMAP}
+	${CC} ${CFLAGS} -I${INCLUDE_DIR} -I./llhttp/build/ ${SRCS_TEST_HASHMAP} ${LIBS} -o ${TEST_HASHMAP}
 
 
 clean:

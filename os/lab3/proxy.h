@@ -8,7 +8,7 @@
 // #include <
 
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 1024 * 64
 
 extern Logger* logger;
 

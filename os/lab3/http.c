@@ -95,18 +95,10 @@ void response_init(response_t *response) {
 }
 
 int response_parse(response_t *response, char *buf, int len) {
+
     llhttp_errno_t err = llhttp_execute(&response->parser, buf, len);
-    char buffer[256];
-    snprintf(
-        buffer, 
-        sizeof(buffer), 
-        "response: HTTP/%d.%d %d",
-        response->major_version,
-        response->minor_version,
-        response->status_code
-    );
-    logger_info(logger, buffer);
     if (err != HPE_OK) {
+        char buffer[1024 * 64];
         snprintf(
             buffer, 
             sizeof(buffer), 
