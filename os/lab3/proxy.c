@@ -172,8 +172,8 @@ void handle_client(client_context* context){
 
     logger_info(logger, "created server thread");
 
-    close(context->client_socket);
-    free(context);
+    // close(context->client_socket);
+    // free(context);
 }
 
 void* client_thread(void * args){
@@ -185,6 +185,8 @@ void* client_thread(void * args){
         "nop"
     );
     logger_info(logger, "client disconnected");
+
+
     return NULL;
 }
 
@@ -194,6 +196,9 @@ static int recieve_response(response_t *response, void **buffer, int *len, int s
     int response_len = 0;
 
     while (!response->finished){
+        logger_info(logger, "server is working");
+        // printf("response_buffer: %s\n", (char *)response_buffer);
+        printf("response_len: %d\n", response_len);
         int len = read(server, response_buffer + response_len, response_buffer_size - response_len);
         if (len < 0){
             logger_error(logger, "read");
@@ -210,6 +215,7 @@ static int recieve_response(response_t *response, void **buffer, int *len, int s
         if (response_len == response_buffer_size){
             response_buffer_size *= 2;
             response_buffer = realloc(response_buffer, response_buffer_size);
+            continue;
         }
         
         if (response_parse(response, response_buffer, response_len) < 0){
@@ -266,7 +272,7 @@ void handle_server(server_context* context){
             logger_error(logger, "write");
             free(response_buffer);
             close(context->server_socket);
-            break;
+            return;
         }
         sent += len;
     }
