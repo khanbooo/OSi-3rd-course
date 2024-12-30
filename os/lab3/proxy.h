@@ -17,7 +17,6 @@ typedef struct server_context {
 
 void handle_client(client_context* context);
 void *client_thread(void *arg);
-// static int recieve_request(client_context* context, request_t* request);
 
-// void server_handler(server_context* context);
-// void *server_thread(void *arg);
+void handle_server(server_context* context);
+void *server_thread(void *arg);

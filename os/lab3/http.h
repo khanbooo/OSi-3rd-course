@@ -20,9 +20,22 @@ typedef struct request {
     llhttp_settings_t settings;
 } request_t;
 
+typedef struct response {
+    int major_version;
+    int minor_version;
+    int status_code;
+    int finished;
+
+    llhttp_t parser;
+    llhttp_settings_t settings;
+} response_t;
+
 void request_init(request_t *request);
+void response_init(request_t *request);
 
 int request_parse(request_t *request, char *buf, int len);
+int response_parse(request_t *request, char *buf, int len);
+
 
 // char *http_host_from_url(char *url);
 
